@@ -1,4 +1,4 @@
-# Clean Architecture with TypeScript
+# Clean Architecture con TypeScript
 
 Proyecto de referencia que implementa **Clean Architecture** con TypeScript y Fastify. Modela un dominio de órdenes de compra aplicando principios de DDD: Aggregate Root, Value Objects, Domain Events y puertos/adaptadores.
 
