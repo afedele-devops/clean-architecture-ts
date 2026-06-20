@@ -1,5 +1,7 @@
 import { Order } from "@domain/entities/Order";
 import { OrderRepository } from "@application/ports/OrderRepository";
+import { OrderId } from "@domain/value-objects/OrderId";
+import { CustomerId } from "@domain/value-objects/CustomerId";
 
 export type CreateOrderInput = {
     orderId: string;
@@ -7,7 +9,7 @@ export type CreateOrderInput = {
 }
 
 export type CreateOrderOutput = {
-    orderId: string;
+    orderId: OrderId;
 }
 
 export class CreateOrder {
@@ -18,7 +20,7 @@ export class CreateOrder {
         if (exist) {
             throw new Error("Order already exists");
         }
-        const order = new Order(orderId, customerId)
+        const order = new Order(OrderId.create(orderId), CustomerId.create(customerId));
         await this.orderRepository.save(order);
         return { orderId: order.id };
     }
