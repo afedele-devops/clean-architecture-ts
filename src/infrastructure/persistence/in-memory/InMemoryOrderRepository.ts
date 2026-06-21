@@ -13,7 +13,7 @@ export class InMemoryOrderRepository implements OrderRepository {
     }
 
     async save(order: Order){
-        this.store.set(order.id, order);
+        this.store.set(order.id.value, order);
     }
 
     async delete(id: string) {

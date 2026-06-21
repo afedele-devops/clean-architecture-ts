@@ -1,3 +1,5 @@
+import { DomainEvent } from "@domain/events/DomainEvent";
+
 export interface EventBus {
-    publish(event: any): void;
+    publish(events: DomainEvent[]): Promise<void>;
 }   

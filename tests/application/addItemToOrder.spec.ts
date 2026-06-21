@@ -6,6 +6,7 @@ import { CustomerId } from "../../src/domain/value-objects/CustomerId"
 import { Price } from "../../src/domain/value-objects/Price"
 import { SKU } from "../../src/domain/value-objects/SKU"
 import { Quantity } from "../../src/domain/value-objects/Quantity"
+import { Currency } from "../../src/domain/value-objects/Currency"
 import type { OrderRepository } from "../../src/application/ports/OrderRepository"
 import type { PricingService } from "../../src/application/ports/PricingService"
 import type { EventBus } from "../../src/application/ports/EventBus"
@@ -108,7 +109,7 @@ describe("AddItemToOrder › happy path", () => {
 
         expect(deps.pricing.getCurrentPrice).toHaveBeenCalledWith(
             SKU.create(VALID_INPUT.sku),
-            VALID_INPUT.currency
+            Currency.create(VALID_INPUT.currency)
         )
     })
 })

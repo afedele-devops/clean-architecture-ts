@@ -7,6 +7,7 @@ import { PricingService } from "@application/ports/PricingService";
 import { EventBus } from "@application/ports/EventBus";
 import { Clock } from "@application/ports/Clock";
 import { Result, ok, fail } from "@shared/result";
+import { Currency } from "@domain/value-objects/Currency";
 
 export class AddItemToOrder {
     constructor(
@@ -30,7 +31,8 @@ export class AddItemToOrder {
 
         const sku = SKU.create(input.sku);
         const qty = Quantity.create(input.qty);
-        const price = await this.pricing.getCurrentPrice(sku, input.currency);
+        const currency = Currency.create(input.currency);
+        const price = await this.pricing.getCurrentPrice(sku, currency);
 
         if(!price){
             const err: ValidationError = new ValidationError("Price not found");
@@ -41,8 +43,8 @@ export class AddItemToOrder {
             order.addItem(sku, qty, price);
             await this.repo.save(order);
             
-            const ev = order.pullDomainEvents();
-            await this.events.publish(ev);
+            const events = order.pullDomainEvents();
+            await this.events.publish(events);
             
             const total = order.total(); 
             return ok({ orderId: order.id.value, total: { amount: total.amount, currency: total.currency } });
