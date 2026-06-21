@@ -10,6 +10,8 @@ Proyecto de referencia que implementa **Clean Architecture** con TypeScript y Fa
 |---|---|---|
 | TypeScript | ^6.0 | Lenguaje principal |
 | Fastify | ^4.23 | Servidor HTTP |
+| pg | ^8.22 | Cliente PostgreSQL |
+| @types/pg | ^8.20 | Tipado para pg |
 | Vitest | ^4.1 | Tests unitarios |
 | tsx | ^3.14 | Ejecución en desarrollo |
 | tsconfig-paths | ^4.2 | Path aliases |
@@ -26,6 +28,7 @@ Proyecto de referencia que implementa **Clean Architecture** con TypeScript y Fa
 │   │   ├── entities/
 │   │   │   └── Order.ts             # Aggregate Root
 │   │   ├── value-objects/
+|   |   |   ├── Currency.ts
 │   │   │   ├── Price.ts             # Valor monetario con validación y aritmética
 │   │   │   ├── Quantity.ts
 │   │   │   ├── SKU.ts
@@ -36,23 +39,39 @@ Proyecto de referencia que implementa **Clean Architecture** con TypeScript y Fa
 │   │   └── errors/
 │   │       └── DomainError.ts       # CurrencyMismatch, InvalidPrice
 │   ├── application/                 # Casos de uso y puertos
+│   │   ├── dtos/
+│   │   │   └── AddItemToOrderDTO.ts
 │   │   ├── use-cases/
-│   │   │   ├── CreateOrder.ts
-│   │   │   └── DeleteOrder.ts
+│   │   │   └── AddItemToOrder.ts   
 │   │   └── ports/
+│   │       ├── Clock.ts
+│   │       ├── EventBus.ts
+│   │       ├── PricingService.ts
 │   │       └── OrderRepository.ts   # Interfaz (puerto de salida)
-│   └── infrastructure/              # Adaptadores y frameworks
-│       ├── persistence/
-│       │   └── InMemoryOrderRepository.ts
-│       ├── http/
-│       │   ├── server.ts            # Configuración Fastify
-│       │   └── OrdersController.ts
-│       └── composition/
-│           └── container.ts         # Composition Root (DI manual)
+│   ├── infrastructure/              # Adaptadores y frameworks
+│   |    ├── messaging/
+│   |    │   ├── OutboxEventBus.ts
+│   |    │   └── PinoLogger.ts
+│   |    ├── persistence/
+│   |    │   ├── in-memory/
+|   |    |   |   └──InMemoryOrderRepository.ts
+│   |    |   └── postgres/
+│   |    │       └── PostgresOrderRepository.ts
+│   |    ├── http/
+|   |    |   ├── HttpPricingService.ts 
+│   |    │   ├── server.ts            # Configuración Fastify
+│   |    │   └── OrdersController.ts
+│   |    └── composition/
+│   |        └── container.ts         # Composition Root (DI manual)
+|   └──shared/
+|      ├── health.ts
+|      └── result.ts
 └── tests/
-    └── domain/
-        ├── order.spec.ts
-        └── price.spec.ts
+  ├── application/
+  │   └── addItemToOrder.spec.ts
+  └── domain/
+    ├── order.spec.ts
+    └── price.spec.ts
 ```
 
 ---
@@ -70,16 +89,18 @@ Contiene toda la lógica de negocio. No depende de ninguna capa externa.
 ### Application
 Orquesta los casos de uso sin conocer detalles de infraestructura.
 
-- **`CreateOrder`** — Verifica que la orden no exista y la persiste.
-- **`DeleteOrder`** — Elimina una orden por ID.
+- **`AddItemToOrder`** — Valida la entrada, consulta el precio actual, agrega el ítem, persiste la orden y publica eventos de dominio.
+- **DTOs y puertos** — `AddItemToOrderDTO`, `Clock`, `EventBus` y `PricingService` separan el caso de uso de sus dependencias externas.
 - **`OrderRepository`** — Interfaz (puerto) que define el contrato de persistencia.
 
 ### Infrastructure
 Implementa los detalles técnicos: HTTP y persistencia.
 
 - **`InMemoryOrderRepository`** — Implementación en memoria del puerto `OrderRepository`.
+- **`PostgresOrderRepository`** — Adaptador preparado para PostgreSQL usando `pg`.
 - **`server.ts`** — Instancia Fastify y registra las rutas.
 - **`OrdersController`** — Maneja las peticiones HTTP delegando a los casos de uso.
+- **`OutboxEventBus`** y **`PinoLogger`** — Soporte para publicación de eventos y logging.
 - **`container.ts`** — Composition Root: cablea dependencias manualmente (sin framework de DI).
 
 ---
@@ -145,6 +166,7 @@ Configurados en `tsconfig.json` y registrados en tiempo de ejecución con `tscon
 
 - **Dependency Rule**: las capas internas no conocen las externas.
 - **Ports & Adapters**: `OrderRepository` es un puerto; `InMemoryOrderRepository` es el adaptador.
+- **Adaptadores múltiples**: la persistencia puede resolverse con memoria o PostgreSQL sin cambiar el caso de uso.
 - **Aggregate Root**: `Order` es el único punto de entrada para modificar el agregado.
 - **Value Objects inmutables**: construidos con factories estáticas que validan invariantes.
 - **Domain Events**: `Order` registra eventos internamente; se extraen con `pullDomainEvents()`.
