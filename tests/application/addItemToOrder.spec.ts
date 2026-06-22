@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { AddItemToOrder } from "../../src/application/use-cases/AddItemToOrder"
+import { makeAddItemToOrder } from "../../src/application/use-cases/AddItemToOrder"
 import { Order } from "../../src/domain/entities/Order"
 import { OrderId } from "../../src/domain/value-objects/OrderId"
 import { CustomerId } from "../../src/domain/value-objects/CustomerId"
@@ -51,7 +51,7 @@ function makeDeps(overrides: {
 }
 
 function makeUseCase(deps = makeDeps()) {
-    return new AddItemToOrder(deps.repo, deps.pricing, deps.events, deps.clock)
+    return makeAddItemToOrder({ orders: deps.repo, pricing: deps.pricing, events: deps.events, clock: deps.clock })
 }
 
 const VALID_INPUT = {

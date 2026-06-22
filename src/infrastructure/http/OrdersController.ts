@@ -1,14 +1,27 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-//import { addItemToOrder, createOrder, deleteOrder } from "@composition/container"; // inyectado desde el contenedor de composition root
-
 import { AddItemToOrder } from "@application/use-cases/AddItemToOrder";
+import { CreateOrder } from "@application/use-cases/CreateOrder";
 import { AppError } from "@domain/errors/DomainError";
 
+export const makeOrdersController = (addItemToOrder: AddItemToOrder, createOrder: CreateOrder) => ({
+    create: async (req: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const body = req.body as any
+            const res = await createOrder.execute({
+                orderId: body.orderId,
+                customerId: body.customerId
+            })
+            return reply.code(201).send({ orderId: res.orderId.value })
+        } catch (e) {
+            const err = e as Error
+            const status = err.message === "Order already exists" ? 409 : 400
+            return reply.code(status).send({ message: err.message })
+        }
+    },
 
-export const makeOrdersController = (uc: AddItemToOrder) => ({
     addItem: async (req: FastifyRequest, reply: FastifyReply) => {
         const body = req.body as any
-        const res = await uc.execute({
+        const res = await addItemToOrder.execute({
             orderId: (req.params as any)["orderId"] as string,
             sku: body.sku,
             qty: body.qty,

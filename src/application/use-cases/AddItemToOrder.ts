@@ -1,21 +1,13 @@
 import { AddItemToOrderOutput, AddItemToOrderInput } from "@application/dtos/AddItemToOrderDTO";
-import { OrderRepository } from "@application/ports/OrderRepository";
 import { ConflictError, CurrencyMismatch, ValidationError, NotFoundError, AppError } from "@domain/errors/DomainError";
 import { Quantity } from "@domain/value-objects/Quantity";
 import { SKU } from "@domain/value-objects/SKU";
-import { PricingService } from "@application/ports/PricingService";
-import { EventBus } from "@application/ports/EventBus";
-import { Clock } from "@application/ports/Clock";
 import { Result, ok, fail } from "@shared/result";
 import { Currency } from "@domain/value-objects/Currency";
+import { AppContext } from "@application/context";
 
-export class AddItemToOrder {
-    constructor(
-        private readonly repo: OrderRepository,
-        private readonly pricing: PricingService,
-        private readonly events: EventBus,
-        private readonly clock: Clock
-    ) {}
+export function makeAddItemToOrder(ctx: AppContext) {
+    return {
 
     async execute(input: AddItemToOrderInput): Promise<Result<AddItemToOrderOutput, AppError>> {
         const v = this.validate(input);
@@ -23,7 +15,7 @@ export class AddItemToOrder {
             return v;
         }
 
-        const order = await this.repo.findById(input.orderId);
+        const order = await ctx.orders.findById(input.orderId);
         if(!order){
             const err: NotFoundError = new NotFoundError("Order", input.orderId);
             return fail(err);
@@ -32,7 +24,7 @@ export class AddItemToOrder {
         const sku = SKU.create(input.sku);
         const qty = Quantity.create(input.qty);
         const currency = Currency.create(input.currency);
-        const price = await this.pricing.getCurrentPrice(sku, currency);
+        const price = await ctx.pricing.getCurrentPrice(sku, currency);
 
         if(!price){
             const err: ValidationError = new ValidationError("Price not found");
@@ -41,10 +33,10 @@ export class AddItemToOrder {
 
         try {
             order.addItem(sku, qty, price);
-            await this.repo.save(order);
+            await ctx.orders.save(order);
             
             const events = order.pullDomainEvents();
-            await this.events.publish(events);
+            await ctx.events.publish(events);
             
             const total = order.total(); 
             return ok({ orderId: order.id.value, total: { amount: total.amount, currency: total.currency } });
@@ -57,9 +49,9 @@ export class AddItemToOrder {
             return fail(err);
         }
     
-    }
+    },
 
-    private validate(input: AddItemToOrderInput): Result<AddItemToOrderInput, ValidationError> {
+    validate(input: AddItemToOrderInput): Result<AddItemToOrderInput, ValidationError> {
         const errors: Record<string, string> = {};
         if(!input.orderId){
             errors.orderId = "orderId is required";
@@ -78,6 +70,8 @@ export class AddItemToOrder {
             ? fail(new ValidationError("Invalid input", errors ))
             : ok(input);
     }
+}
 
 }
 
+export type AddItemToOrder = ReturnType<typeof makeAddItemToOrder>

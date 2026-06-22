@@ -28,7 +28,7 @@
       "@application/*": ["src/application/*"],
       "@infrastructure/*": ["src/infrastructure/*"],
       "@shared/*": ["src/shared/*"],
-      "@composition/*": ["src/infrastructure/composition/*"]
+      "@composition/*": ["src/composition/*"]
     }
   },
   "include": ["src/**/*.ts", "main.ts"],
